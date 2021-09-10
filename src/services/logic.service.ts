@@ -5,10 +5,9 @@ import { Channel, NetworkMap } from '../classes/network-map';
 import { redisSetJson, redisGetJson, redisDeleteKey } from '../clients/redis.client';
 import { RuleResult } from '../classes/rule-result';
 import { TypologyResult } from '../classes/typology-result';
-import apm from 'elastic-apm-node';
-import { Context, Next } from 'koa';
 import { ChannelResult } from '../classes/channel-result';
 import axios from 'axios';
+import apm from 'elastic-apm-node';
 
 const executeRequest = async (
   request: CustomerCreditTransferInitiation,
@@ -74,7 +73,12 @@ const executeRequest = async (
   }
 };
 
-export const handleTransaction = async (req: CustomerCreditTransferInitiation, networkMap: NetworkMap, ruleResult: RuleResult[], typologyResult: TypologyResult): Promise<string> => {
+export const handleTransaction = async (
+  req: CustomerCreditTransferInitiation,
+  networkMap: NetworkMap,
+  ruleResult: RuleResult[],
+  typologyResult: TypologyResult,
+): Promise<string> => {
   let channelCounter = 0;
   const toReturn = [];
   for (const channel of networkMap.transactions[0].channels) {
@@ -88,25 +92,19 @@ export const handleTransaction = async (req: CustomerCreditTransferInitiation, n
   return result;
 };
 
-// TODO: Remove the http dependency and use axios instead
 // Submit the Channel result to the TADP
-const executePost = (endpoint: string, request: string): Promise<void | Error> => {
-  return new Promise(async (resolve) => {
-
-    try {
-      const res = await axios.post(endpoint, request);
-      LoggerService.log(`Rule response statusCode: ${res.status}`);
-      if (res.status !== 200) {
-        LoggerService.trace(`StatusCode != 200, request:\r\n${request}`);
-        LoggerService.error(`Error Code (${res.status}) from TADP with message: \r\n${res.data ?? "[NO MESSAGE]"}`)
-      }
-      LoggerService.log(`Success response from TADP with message: ${res.toString()}`);
-      resolve();
-    } catch (err) {
-      LoggerService.error(`Error while sending request to TADP with message: ${err ?? "[NO ERROR]"}`);
-      LoggerService.trace(`Request:\r\n${request}`);
-      if (err instanceof Error)
-        resolve(err);
+const executePost = async (endpoint: string, request: string): Promise<void | Error> => {
+  try {
+    const res = await axios.post(endpoint, request);
+    LoggerService.log(`Rule response statusCode: ${res.status}`);
+    if (res.status !== 200) {
+      LoggerService.trace(`StatusCode != 200, request:\r\n${request}`);
+      LoggerService.error(`Error Code (${res.status}) from TADP with message: \r\n${res.data ?? '[NO MESSAGE]'}`);
     }
-  });
+    LoggerService.log(`Success response from TADP with message: ${res.toString()}`);
+  } catch (err) {
+    LoggerService.error(`Error while sending request to TADP with message: ${err ?? '[NO ERROR]'}`);
+    LoggerService.trace(`Request:\r\n${request}`);
+    throw Error(err as string);
+  }
 };

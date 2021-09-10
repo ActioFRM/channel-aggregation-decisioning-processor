@@ -1,11 +1,7 @@
-import { Metadata, sendUnaryData } from '@grpc/grpc-js';
-import { ServerErrorResponse, ServerStatusResponse } from '@grpc/grpc-js/build/src/server-call';
 import { CustomerCreditTransferInitiation } from '../../src/classes/iPain001Transaction';
 import { NetworkMap } from '../../src/classes/network-map';
 import { RuleResult } from '../../src/classes/rule-result';
 import { TypologyResult } from '../../src/classes/typology-result';
-import { config } from '../../src/config';
-import { FlowFileReply } from '../../src/models/nifi_pb';
 import { handleTransaction } from '../../src/services/logic.service';
 
 const getMockTransaction = () => {
@@ -25,35 +21,33 @@ const getMockNetworkMap = () => {
 };
 
 describe('Logic Service', () => {
-  // let logicServiceExecutePostSpy: jest.SpyInstance;
-  // beforeEach(() => {
-  //   logicServiceExecutePostSpy = jest.spyOn(LogicService, 'executePost').mockImplementation();
-  // });
-
   describe('Handle Legacy Transaction', () => {
     it('should handle successful request, with a unmatched number', async () => {
       const expectedReq = getMockTransaction();
-      let test = false;
 
       const ruleResult: RuleResult[] = [{ result: true, rule: '001_Derived_account_age_payee' }];
-      const req = getMockTransaction();
+
       const networkMap = getMockNetworkMap();
-      const typologyResult: TypologyResult = { result: 50, typology: "Typology_29.1.0" };
+      const typologyResult: TypologyResult = { result: 50, typology: 'Typology_29.1.0' };
 
       const result = await handleTransaction(expectedReq, networkMap, ruleResult, typologyResult);
-      expect(result.replace(/\s/g, '')).toEqual(`1 channels initiated for transaction ID: asdf1234, with the following results:
-{"Channel": Fraud, "Result":Error}`.replace(/\s/g, ''));
+      expect(result.replace(/\s/g, '')).toEqual(
+        `1 channels initiated for transaction ID: asdf1234, with the following results:
+{"Channel": Fraud, "Result":Error}`.replace(/\s/g, ''),
+      );
     });
 
     it('should handle successful request, with a matched number', async () => {
       const expectedReq = getMockTransaction();
-      let test = false;
+
       const ruleResult: RuleResult[] = [{ result: true, rule: '001_Derived_account_age_payee' }];
       const networkMap = getMockNetworkMap();
-      const typologyResult: TypologyResult = { result: 50, typology: "Typology_29.1.0" };
+      const typologyResult: TypologyResult = { result: 50, typology: 'Typology_29.1.0' };
       const result = await handleTransaction(expectedReq, networkMap, ruleResult, typologyResult);
-      expect(result.replace(/\s/g, '')).toEqual(`1 channels initiated for transaction ID: asdf1234, with the following results:
-{"Channel": Fraud, "Result":Error}`.replace(/\s/g, ''));
+      expect(result.replace(/\s/g, '')).toEqual(
+        `1 channels initiated for transaction ID: asdf1234, with the following results:
+{"Channel": Fraud, "Result":Error}`.replace(/\s/g, ''),
+      );
     });
   });
 });
