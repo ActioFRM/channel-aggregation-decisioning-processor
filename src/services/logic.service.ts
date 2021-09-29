@@ -2,12 +2,12 @@ import { config } from '../config';
 import { LoggerService } from './logger.service';
 import { CustomerCreditTransferInitiation } from '../classes/iPain001Transaction';
 import { Channel, NetworkMap } from '../classes/network-map';
-import { redisSetJson, redisGetJson, redisDeleteKey } from '../clients/redis.client';
 import { RuleResult } from '../classes/rule-result';
 import { TypologyResult } from '../classes/typology-result';
 import { ChannelResult } from '../classes/channel-result';
 import axios from 'axios';
 import apm from 'elastic-apm-node';
+import { cacheService } from '..';
 
 const executeRequest = async (
   request: CustomerCreditTransferInitiation,
@@ -21,7 +21,7 @@ const executeRequest = async (
   try {
     const transactionID = request.PaymentInformation.CreditTransferTransactionInformation.PaymentIdentification.EndToEndIdentification;
     const cacheKey = `${transactionID}_${channel.channel_id}`;
-    const jtypologyResults = await redisGetJson(cacheKey);
+    const jtypologyResults = await cacheService.getJson(cacheKey);
     const typologyResults: TypologyResult[] = [];
 
     if (jtypologyResults && jtypologyResults.length > 0) Object.assign(typologyResults, JSON.parse(jtypologyResults));
@@ -33,7 +33,7 @@ const executeRequest = async (
     // check if all results for this Channel is found
     if (typologyResults.length < channel.typologies.length) {
       span = apm.startSpan(`[${transactionID}] Save Channel interim rule results to Cache`);
-      await redisSetJson(cacheKey, JSON.stringify(typologyResults));
+      await cacheService.setJson(cacheKey, JSON.stringify(typologyResults));
       span?.end();
       return 'Incomplete';
     }
@@ -63,7 +63,7 @@ const executeRequest = async (
       LoggerService.error('Error while sending Channel result to TADP', error as Error, 'executeRequest');
     }
     span = apm.startSpan(`[${transactionID}] Delete Typology interim cache key`);
-    await redisDeleteKey(cacheKey);
+    await cacheService.deleteKey(cacheKey);
     span?.end();
     return 'Complete';
   } catch (error) {
@@ -85,6 +85,7 @@ export const handleTransaction = async (
     channelCounter++;
     const channelRes = await executeRequest(req, channel, ruleResult, networkMap, typologyResult);
     toReturn.push(`{"Channel": ${channel.channel_id}, "Result":${channelRes}}`);
+    console.log(channelCounter);
   }
 
   const result = `${channelCounter} channels initiated for transaction ID: ${req.PaymentInformation.CreditTransferTransactionInformation.PaymentIdentification.EndToEndIdentification}, with the following results:\r\n${toReturn}`;
