@@ -48,15 +48,15 @@ const executeRequest = async (
     // Send TADP request with this all results - to be persisted at TADP
     try {
       const tadpReqBody = {
-        ruleResults: ruleResults,
-        typologyResults: typologyResults,
-        channelResult: channelResult,
         transaction: request,
+        ruleResults: ruleResults,
+        typologyResult: typologyResults,
         networkMap: networkMap,
+        channelResult: channelResult,
       };
 
       span = apm.startSpan(`[${transactionID}] Send Channel result to TADP`);
-      await executePost(config.tadpEndpoint, JSON.stringify(tadpReqBody));
+      await executePost(config.tadpEndpoint, tadpReqBody);
       span?.end();
     } catch (error) {
       span?.end();
@@ -94,18 +94,18 @@ export const handleTransaction = async (
 };
 
 // Submit the Channel result to the TADP
-const executePost = async (endpoint: string, request: string): Promise<void | Error> => {
+const executePost = async (endpoint: string, request: any): Promise<void | Error> => {
   try {
     const res = await axios.post(endpoint, request);
-    LoggerService.log(`Rule response statusCode: ${res.status}`);
+    LoggerService.log(`TADP response statusCode: ${res.status}`);
     if (res.status !== 200) {
-      LoggerService.trace(`StatusCode != 200, request:\r\n${request}`);
+      LoggerService.trace(`Result from TADP StatusCode != 200, request:\r\n${request}`);
       LoggerService.error(`Error Code (${res.status}) from TADP with message: \r\n${res.data ?? '[NO MESSAGE]'}`);
     }
     LoggerService.log(`Success response from TADP with message: ${res.toString()}`);
   } catch (err) {
-    LoggerService.error(`Error while sending request to TADP with message: ${err ?? '[NO ERROR]'}`);
-    LoggerService.trace(`Request:\r\n${request}`);
+    LoggerService.error(`Error while sending request to TADP`, err);
+    LoggerService.trace(`Error while sending request to TADP with Request:\r\n${request}`);
     throw Error(err as string);
   }
 };

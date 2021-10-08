@@ -1,9 +1,7 @@
 import { config } from '../config';
 import log4js, { Log4js } from 'log4js';
 
-let logger: log4js.Logger;
-
-if (config.dev !== 'dev') {
+if (config.nodeEnv !== 'development' && config.nodeEnv !== 'test') {
   log4js.configure({
     appenders: {
       logstash: {
@@ -19,8 +17,9 @@ if (config.dev !== 'dev') {
     },
   });
 
-  logger = log4js.getLogger();
 }
+
+const logger = config.nodeEnv === 'development' || config.nodeEnv === 'test' ? console : log4js.getLogger();
 
 export abstract class LoggerService {
   static timeStamp(): string {
@@ -39,19 +38,19 @@ export abstract class LoggerService {
   }
 
   static trace(message: string, serviceOperation?: string) {
-    if (config.dev !== 'dev') logger.trace(`${LoggerService.messageStamp(serviceOperation)}[TRACE] - ${message}`);
+    if (config.nodeEnv !== 'dev') logger.trace(`${LoggerService.messageStamp(serviceOperation)}[TRACE] - ${message}`);
   }
 
   static log(message: string, serviceOperation?: string) {
-    if (config.dev !== 'dev') logger.info(`${LoggerService.messageStamp(serviceOperation)}[INFO] - ${message}`);
+    if (config.nodeEnv !== 'dev') logger.info(`${LoggerService.messageStamp(serviceOperation)}[INFO] - ${message}`);
   }
 
   static warn(message: string, serviceOperation?: string) {
-    if (config.dev !== 'dev') logger.warn(`${LoggerService.messageStamp(serviceOperation)}[WARN] - ${message}`);
+    if (config.nodeEnv !== 'dev') logger.warn(`${LoggerService.messageStamp(serviceOperation)}[WARN] - ${message}`);
   }
 
   static error(message: string | Error, innerError?: unknown, serviceOperation?: string) {
-    if (config.dev === 'dev') return;
+    if (config.nodeEnv === 'dev') return;
 
     let errMessage = typeof message === 'string' ? message : message.stack;
 
